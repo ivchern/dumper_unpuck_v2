@@ -152,7 +152,7 @@ def upload():
     return jsonify({'error': 'Invalid file extension'})
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
     table_list = get_table_list()
 

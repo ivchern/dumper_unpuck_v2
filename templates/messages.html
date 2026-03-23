@@ -1,0 +1,113 @@
+<!-- details.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Details</title>
+    <style>
+        body {
+            background-color: #333;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .message {
+            background-color: #555;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .author-date {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .message-text {
+            margin-bottom: 10px;
+        }
+
+        .attachment-links {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .attachment-links img {
+            max-width: 100%;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+
+        #loadMoreButton {
+            background-color: #4caf50;
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        #loadMoreButton:hover {
+            background-color: #45a049;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectedId = urlParams.get('id');
+            const my_table = urlParams.get('my_table');
+            if (selectedId) {
+                const targetElement = document.getElementById(`row-${selectedId}`);
+                if (targetElement) {
+                    targetElement.scrollIntoView();
+                }
+            }
+            const loadMoreBeforeButton = document.getElementById("loadMoreBeforeButton");
+            if (loadMoreBeforeButton) {
+                loadMoreBeforeButton.addEventListener("click", function() {
+                    const newId = parseInt(selectedId) - 200;
+                    window.location.replace(`/details?id=${newId}&my_table=${my_table}`);
+                });
+            }
+            const loadMoreAfterButton = document.getElementById("loadMoreAfterButton");
+            if (loadMoreAfterButton) {
+                loadMoreAfterButton.addEventListener("click", function() {
+                    const newId = parseInt(selectedId) + 200;
+                    window.location.replace(`/details?id=${newId}&my_table=${my_table}`);
+                });
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>Details for ID: {{ selected_id }}</h1>
+    <button id="loadMoreBeforeButton">Загрузить до</button>
+    {% for row in results %}
+        <div class="message" id="row-{{ row[0] }}">
+            <div class="author-date">
+                <span>{{ row[3] }}</span> <!-- author_name -->
+                <span>{{ row[6] }}</span> <!-- message_date -->
+            </div>
+            <div class="message-text">
+                {{ row[5] }} <!-- message_text -->
+            </div>
+            {% if row[7] and row[7] != '[]' %}
+                <div class="attachment-links">
+                    {% for link in row[7].strip('[]').split(', ') %}
+                        {% set link = link.replace('"', '') %}
+                        <img src="{{ link }}" alt="Attachment">
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}
+    <button id="loadMoreAfterButton">Загрузить еще</button>
+</body>
+</html>

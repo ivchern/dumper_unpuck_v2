@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Across All Tables</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #333;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4caf50;
+        }
+
+        form {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #555;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="text"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #777;
+            border-radius: 4px;
+            color: #333;
+            background-color: #fff;
+        }
+
+        input[type="submit"] {
+            background-color: #4caf50;
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: #555;
+        }
+
+        th, td {
+            border: 1px solid #777;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4caf50;
+        }
+
+        td {
+            background-color: #444;
+        }
+
+        .clickable-id {
+            cursor: pointer;
+            color: #4caf50;
+        }
+
+        .clickable-id:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Across All Tables</h1>
+
+    <form action="/search_page" method="POST">
+        <input type="text" name="search_text" placeholder="Enter search term" value="%%}">
+        <input type="submit" value="Search">
+    </form>
+
+    {% if search_results %}
+        <h2 style="text-align: center; color: #4caf50;">Search Results for "{{ search_text }}"</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>ID</th>
+                    <th>Message Text</th>
+                    <th>Message Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in search_results %}
+                    {% for row in result['results'] %}
+                        <tr>
+                            <td>{{ result['table'] }}</td>
+                            <td class="clickable-id" data-id="{{ row[0] }}">
+                                <a href="/details?id={{ row[0] }}&my_table={{ result['table'] }}" target="_blank">{{ row[0] }}</a>
+                            </td>
+                            <td>{{ row[4] }}</td> <!-- Message Text -->
+                            <td>{{ row[5] }}</td> <!-- Message Date -->
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="text-align: center; color: #f44336;">No results found for "{{ search_text }}"</p>
+    {% endif %}
+</body>
+</html>

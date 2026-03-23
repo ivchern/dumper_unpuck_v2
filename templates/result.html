@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Results</title>
+
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #333;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: #00ff00;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #555;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #222;
+            color: #00ff00;
+        }
+
+        td {
+            background-color: #333;
+        }
+
+        .clickable-id {
+            cursor: pointer;
+            color: #00ff00;
+        }
+
+        .clickable-id:hover {
+            text-decoration: underline;
+        }
+
+        .attachment-links img {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-top: 5px;
+            cursor: pointer;
+        }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 80%;
+            max-height: 80%;
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+        }
+
+        /* Навигация по изображениям */
+        .prev, .next {
+            position: absolute;
+            top: 50%;
+            padding: 16px;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .prev {
+            left: 10px;
+            transform: translateY(-50%);
+        }
+
+        .next {
+            right: 10px;
+            transform: translateY(-50%);
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const resultTable = document.querySelector('table');
+            let images = []; // Массив для хранения ссылок на изображения
+            let currentImageIndex = 0; // Индекс текущего изображения
+
+            resultTable.addEventListener('click', function(event) {
+                // Если клик по картинке
+                if (event.target.tagName === 'IMG') {
+                    const modal = document.getElementById("myModal");
+                    const modalImg = document.getElementById("img01");
+                    const captionText = document.getElementById("caption");
+                    images = []; // Очищаем массив картинок
+
+                    // Собираем все изображения для просмотра
+                    document.querySelectorAll('.attachment-links img').forEach(img => {
+                        images.push(img.src);
+                    });
+
+                    // Устанавливаем первое изображение в модальном окне
+                    currentImageIndex = images.indexOf(event.target.src);
+                    modal.style.display = "block";
+                    modalImg.src = event.target.src;
+                    captionText.innerHTML = event.target.alt;
+                }
+            });
+
+            // Функции для изменения изображения в модальном окне
+            const prevBtn = document.getElementById("prevBtn");
+            const nextBtn = document.getElementById("nextBtn");
+
+            prevBtn.addEventListener("click", function() {
+                if (currentImageIndex > 0) {
+                    currentImageIndex--;
+                    updateModalImage();
+                }
+            });
+
+            nextBtn.addEventListener("click", function() {
+                if (currentImageIndex < images.length - 1) {
+                    currentImageIndex++;
+                    updateModalImage();
+                }
+            });
+
+            // Обновление модального окна с новым изображением
+            function updateModalImage() {
+                const modalImg = document.getElementById("img01");
+                const captionText = document.getElementById("caption");
+                modalImg.src = images[currentImageIndex];
+                captionText.innerHTML = `Image ${currentImageIndex + 1} of ${images.length}`;
+            }
+
+            // Закрытие модального окна
+            const closeBtn = document.getElementById("closeBtn");
+            closeBtn.addEventListener("click", function() {
+                const modal = document.getElementById("myModal");
+                modal.style.display = "none";
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Query Results</h1>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>chat_id</th>
+            <th>user_name</th>
+            <th>message</th>
+            <th>attachments</th>
+        </tr>
+        {% for row in results %}
+        <tr>
+            {% for value in [row[0], row[1], row[3], row[5]] %}
+                {% if loop.index == 1 %}
+                    <td class="clickable-id" data-id="{{ value }}">
+                        <a href="/details?id={{ value }}&my_table={{ my_table }}" target="_blank">{{ value }}</a>
+                    </td>
+                {% else %}
+                    <td>{{ value }}</td>
+                {% endif %}
+            {% endfor %}
+            <td>
+                {% if row[7] and row[7] != '[]' %}
+                    <div class="attachment-links">
+                        {% for link in row[7].strip('[]').split(', ') %}
+                            {% set link = link.replace('"', '') %}
+                            <img src="{{ link }}" alt="Attachment">
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <!-- Модальное окно для увеличения изображения -->
+    <div id="myModal" class="modal">
+        <span id="closeBtn" class="close">&times;</span>
+        <img class="modal-content" id="img01">
+        <div id="caption"></div>
+        <!-- Кнопки навигации -->
+        <button id="prevBtn" class="prev">&#10094;</button>
+        <button id="nextBtn" class="next">&#10095;</button>
+    </div>
+</body>
+</html>

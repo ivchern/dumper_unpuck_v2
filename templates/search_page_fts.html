@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Search (FTS)</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #333; color: #fff; margin: 0; padding: 0; }
+        h1 { text-align: center; color: #4caf50; }
+        form { max-width: 600px; margin: 20px auto; background-color: #555; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); }
+        input[type="text"], select { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #777; border-radius: 4px; color: #333; background-color: #fff; }
+        .checkbox-container { display: flex; align-items: center; margin-bottom: 15px; }
+        .checkbox-container input { margin-right: 10px; }
+        input[type="submit"] { background-color: #4caf50; color: #fff; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
+        input[type="submit"]:hover { background-color: #45a049; }
+        table { width: 90%; margin: 20px auto; border-collapse: collapse; background-color: #555; }
+        th, td { border: 1px solid #777; padding: 10px; text-align: left; }
+        th { background-color: #4caf50; }
+        td { background-color: #444; }
+        .clickable-id { cursor: pointer; color: #4caf50; text-decoration: none; }
+        .clickable-id:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Advanced Search (FTS Filter)</h1>
+    <form action="/search_page_fts" method="POST">
+        <label>Искать в таблице (введите 'all' для поиска по всем):</label>
+        <input list="table-options" name="selected_table" value="{{ selected_table }}" placeholder="Начните писать или выберите..." autocomplete="off">
+        <datalist id="table-options">
+            <option value="all">--- Все таблицы ---</option>
+            {% for t in tables %}
+                <option value="{{ t }}"></option>
+            {% endfor %}
+        </datalist>
+
+        <label>Сортировка по дате:</label>
+        <select name="sort_order">
+            <option value="DESC" {% if sort_order == 'DESC' or not sort_order %}selected{% endif %}>Сначала новые (убывание)</option>
+            <option value="ASC" {% if sort_order == 'ASC' %}selected{% endif %}>Сначала старые (возрастание)</option>
+        </select>
+
+        <label>ID чата (если известен):</label>
+        <input type="text" name="chat_id" placeholder="Оставьте пустым для поиска по всем чатам" value="{{ chat_id }}">
+
+        <label>Имя автора:</label>
+        <input type="text" name="author_name" placeholder="Введите имя (поиск по частичному или полному совпадению)..." value="{{ author_name }}">
+
+        <label>Текст сообщения:</label>
+        <input type="text" name="search_text" placeholder="Введите текст для поиска..." value="{{ search_text }}">
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="use_pymorphy" name="use_pymorphy" {% if use_pymorphy or not search_text %}checked{% endif %}>
+            <label for="use_pymorphy">Умный поиск со словарем (Pymorphy3) — понимает падежи и ошибки окончаний.</label>
+        </div>
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="use_pagination" name="use_pagination" {% if use_pagination %}checked{% endif %}>
+            <label for="use_pagination">Ограничивать выдачу (по 200 сообщений за раз). Снимите галочку, чтобы вывести сразу ВСЕ найденные результаты на одной странице.</label>
+        </div>
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="has_attachments" name="has_attachments" {% if has_attachments %}checked{% endif %}>
+            <label for="has_attachments">Искать только сообщения с вложениями (файлами)</label>
+        </div>
+
+        <input type="submit" value="Найти">
+    </form>
+
+    {% if search_results != None %}
+        {% if search_results|length > 0 %}
+            <h2 style="text-align: center; color: #4caf50;">Результаты поиска</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Таблица</th>
+                        <th>Chat ID</th>
+                        <th>ID</th>
+                        <th>Текст сообщения</th>
+                        <th>Дата</th>
+                        <th>Вложения</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in search_results %}
+                        {% set row = item['row'] %}
+                        <tr id="result-row-{{ loop.index }}">
+                            <td>{{ item['table'] }}</td>
+                            <td>{{ row[1] }}</td> <!-- Chat ID -->
+                            <td>
+                                <a class="clickable-id" href="/details?id={{ row[0] }}&my_table={{ item['table'] }}" target="_blank">{{ row[0] }}</a>
+                            </td>
+                            <td>{{ row[5] }}</td> <!-- Message Text -->
+                            <td>{{ row[6] }}</td> <!-- Message Date -->
+                            <td>
+                                {% if row[7] and row[7] != '[]' and row[7] != 'null' %}
+                                    <div style="display: flex; flex-wrap: wrap;">
+                                        {% for link in row[7].strip('[]').split(',') %}
+                                            {% set link = link.strip().replace('"', '') %}
+                                            {% if link %}
+                                                <img src="{{ link }}" alt="Attachment" style="max-width: 150px; max-height: 150px; border-radius: 5px; margin: 2px; object-fit: cover;">
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    Нет
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            {% if has_more %}
+                <form action="/search_page_fts#result-row-{{ current_limit }}" method="POST" style="text-align: center; margin: 20px auto; background-color: transparent; box-shadow: none; max-width: 100%;">
+                    <input type="hidden" name="search_text" value="{{ search_text }}">
+                    <input type="hidden" name="selected_table" value="{{ selected_table }}">
+                    <input type="hidden" name="chat_id" value="{{ chat_id }}">
+                    <input type="hidden" name="author_name" value="{{ author_name }}">
+                    {% if has_attachments %}
+                        <input type="hidden" name="has_attachments" value="on">
+                    {% endif %}
+                    {% if use_pymorphy %}
+                        <input type="hidden" name="use_pymorphy" value="on">
+                    {% endif %}
+                    {% if use_pagination %}
+                        <input type="hidden" name="use_pagination" value="on">
+                    {% endif %}
+                    <input type="hidden" name="sort_order" value="{{ sort_order }}">
+                    <input type="hidden" name="current_limit" value="{{ current_limit + 200 }}">
+                    <input type="submit" value="Загрузить еще (Показано {{ current_limit }})" style="width: auto; padding: 10px 30px;">
+                </form>
+            {% elif search_results is defined and search_results|length > 0 %}
+                <p style="text-align: center; color: #aaa;">Диалог загружен полностью (показаны все результаты).</p>
+            {% endif %}
+            
+        {% else %}
+            <p style="text-align: center; color: #f44336;">Ничего не найдено.</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html>
